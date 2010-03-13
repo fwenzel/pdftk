@@ -1,0 +1,48 @@
+# Makefile.Windows
+# Copyright 2004 Sid Steward
+# This is part of pdftk; visit: www.pdftk.com
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.Windows
+#   Install (as root):   make -f Makefile.Windows install
+#   Uninstall:           make -f Makefile.Windows uninstall
+#   Clean:               make -f Makefile.Windows clean
+# 	 								
+
+# tools
+#
+CXX= g++
+export GCJ= gcj
+export GCJH= gcjh
+export AR= ar
+export RM= rm
+
+
+# CXX flags specific to MinGW 3.3.1
+# If you remove the optimizing "-O" flag from CXXFLAGS, then linking might
+# fail in MinGW 3.3.1 on Windows.  The inclusion of <java/lang/String.h> by
+# pdftk.cc causes the inline function length() to be defined a second time.
+# Optimization flags -O1, -O2 and -O3 fix this problem.
+#
+# pdftk compiler flags; 0x2f is a forward slash; 0x5c is a backslash
+# if you want pdftk to ask before overwriting a file, set
+# ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
+# with the dont_ask or do_ask command-line options
+CPPFLAGS= -O3 -DPATH_DELIM=0x5c -DASK_ABOUT_WARNINGS=true -fdollars-in-identifiers
+CXXFLAGS= -lgcj -lws2_32 -liconv
+
+# gcj flags; these are relevant only to the ../java_libs/Makefile, yet it's
+# handy to configure them here
+#
+# -O3 might cause pdftk to segfault on cat operation (gcc 3.4.4) -- though it
+# works fine on my gcc 3.4.2
+#
+export GCJFLAGS= -O2
+
+#
+export ARFLAGS= rs
+export RMFLAGS= -vf
+
+#
+include Makefile.Base

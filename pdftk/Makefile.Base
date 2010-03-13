@@ -1,0 +1,76 @@
+# Makefile.Base
+# Copyright 2003, 2004, 2006 Sid Steward, Updated by Andre Gompel
+# This is part of pdftk: www.pdftk.com
+#
+# Don't call this makefile directly; it is included by other,
+# platform-specific makefiles, e.g.: Makefile.Debian
+#
+ 
+export java_libs_root= ../java_libs
+
+# repeat pdf.a because there are circular dependencies between
+# pdf.a and text.a
+#
+# the fonts/*.o resources must be referenced directly; assembling
+# them into fonts.a resulted in none of these resources appearing in pdftk
+# (on MinGW gcj 3.4.1)
+#
+itext_libs= \
+$(java_libs_root)/com/lowagie/text/pdf/pdf.a \
+$(java_libs_root)/com/lowagie/text/text.a \
+$(java_libs_root)/com/lowagie/text/pdf/pdf.a \
+$(java_libs_root)/com/lowagie/text/pdf/codec/codec.a \
+$(java_libs_root)/com/lowagie/text/pdf/codec/wmf/wmf.a \
+$(java_libs_root)/com/lowagie/text/pdf/fonts/fonts.a \
+$(java_libs_root)/com/lowagie/text/markup/markup.a \
+$(java_libs_root)/com/lowagie/text/xml/xmp/xmp.a \
+$(java_libs_root)/com/lowagie/bc/asn1/asn1.a \
+$(java_libs_root)/com/lowagie/text/pdf/codec/postscript/postscript.a \
+
+# font metric files, included as resources
+afms= $(wildcard $(java_libs_root)/com/lowagie/text/pdf/fonts/*.afm)
+afm_objects= $(patsubst %.afm, %.o, $(afms))
+
+# older versions of libgcj might not have the MD5 algorithm,
+# so I added it here; these *_local java files were grabbed from
+# libgcj CVS on March 7, 2004; diffed September 5, 2006 w/ gcc 4.1.1
+#
+# gnu/gcj/convert/Input_UnicodeBig.java was grabbed March 26, 2004; diffed September 5, 2006 w/ gcc 4.1.1
+#
+libgcj_local_libs = \
+$(java_libs_root)/java_local/security/security.a \
+$(java_libs_root)/gnu_local/java/security/provider/provider.a \
+$(java_libs_root)/gnu_local/java/security/security.a \
+$(java_libs_root)/gnu/gcj/convert/convert.a
+
+# this must already be set according to your platform Makefile;
+# we're just appending to it, here
+#
+CPPFLAGS += -DPDFTK_VER=\"1.41\"
+
+all : java_libs pdftk
+
+java_libs :
+	$(MAKE) -C $(java_libs_root)
+
+attachments.o : attachments.cc attachments.h pdftk.h $(itext_libs) $(libgcj_local_libs)
+	$(CXX) attachments.cc -I$(java_libs_root) $(CPPFLAGS) -c
+
+report.o : report.cc report.h pdftk.h $(itext_libs) $(libgcj_local_libs)
+	$(CXX) report.cc -I$(java_libs_root) $(CPPFLAGS) -c
+
+pdftk.o : pdftk.cc pdftk.h attachments.h report.h $(itext_libs) $(libgcj_local_libs)
+	$(CXX) pdftk.cc -I$(java_libs_root) $(CPPFLAGS) -c
+
+pdftk : pdftk.o attachments.o report.o $(itext_libs) $(libgcj_local_libs) $(afm_objects)
+	$(CXX) pdftk.o attachments.o report.o $(itext_libs) $(libgcj_local_libs) $(afm_objects) -I$(java_libs_root) $(CPPFLAGS) $(CXXFLAGS) -o pdftk
+
+install:
+	/usr/bin/install pdftk /usr/local/bin 
+
+uninstall:
+	rm -vf /usr/local/bin/pdftk
+
+clean:
+	$(MAKE) -C $(java_libs_root) clean
+	rm -vf *.o

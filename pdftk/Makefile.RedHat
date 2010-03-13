@@ -1,0 +1,48 @@
+# Makefile.RedHat
+# This is part of pdftk: www.pdftk.com
+#
+# Contributed by Andre Gompel, Embedded Software Consultant
+# RedHat 8 compatibility (gcc 3.2) also made possible by Carter Patterson
+#
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.RedHat
+#   Install (as root):   make -f Makefile.RedHat install
+#   Uninstall:           make -f Makefile.RedHat uninstall
+#   Clean:               make -f Makefile.RedHat clean
+# 	 								
+
+# tools
+TOOLPATH=
+VERSUFF=
+CXX= $(TOOLPATH)g++$(VERSUFF)
+export GCJ= $(TOOLPATH)gcj$(VERSUFF)
+export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
+export AR= ar
+export RM= rm
+
+# pdftk compiler flags; 0x2f is a forward slash; 0x5c is a backslash
+# if you want pdftk to ask before overwriting a file, set
+# ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
+# with the dont_ask or do_ask command-line options
+CPPFLAGS= -O2 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
+CXXFLAGS= -lgcj
+
+# itext compiler flags
+# -O3 might cause pdftk to segfault on cat operation (gcc 3.4.4)
+export GCJFLAGS= -O2
+
+#
+export ARFLAGS= rs
+export RMFLAGS= -vf
+
+#
+include Makefile.Base
+
+# For RedHat Linux 9.0 (gcc 3.2.2), -O3 creates compiling problems, -O2 works fine.
+# Specifically, we get:
+#   "mixing C++ and Java catches in a single translation unit" errors
+#
+# Thanks to Andre Gompel for identifying and fixing this problem, and for
+# improving these Makefiles. 

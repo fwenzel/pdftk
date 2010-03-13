@@ -1,0 +1,42 @@
+# Makefile.MacOSX
+# Copyright 2004 Sid Steward
+# This is part of pdftk: www.pdftk.com
+
+# Brief Instructions
+#
+#   Compile:             make -f Makefile.MacOSX
+#   Install (as root):   make -f Makefile.MacOSX install
+#   Uninstall:           make -f Makefile.MacOSX uninstall
+#   Clean:               make -f Makefile.MacOSX clean
+# 	 								
+
+# tools
+# adjust TOOLPATH to match the location of your toolset;
+# for an article on building GCJ on OS X, see:
+# http://users.bestweb.net/~john3g/gcj_osx/gcj_on_osx.html
+#
+TOOLPATH= /usr/local/gcj/bin/
+VERSUFF=
+CXX= $(TOOLPATH)g++$(VERSUFF)
+export GCJ= $(TOOLPATH)gcj$(VERSUFF)
+export GCJH= $(TOOLPATH)gcjh$(VERSUFF)
+export AR= ar
+export RM= rm
+
+# pdftk compiler flags; 0x2f is a forward slash; 0x5c is a backslash
+# if you want pdftk to ask before overwriting a file, set
+# ASK_ABOUT_WARNINGS to true; otherwise: false; override this default
+# with the dont_ask or do_ask command-line options
+CPPFLAGS= -O3 -DPATH_DELIM=0x2f -DASK_ABOUT_WARNINGS=false -fdollars-in-identifiers
+CXXFLAGS= -lgcj -liconv
+
+# itext compiler flags
+# -O3 might cause pdftk to segfault on cat operation (gcc 3.4.4)
+export GCJFLAGS= -O2
+
+#
+export ARFLAGS= rs
+export RMFLAGS= -vf
+
+#
+include Makefile.Base
