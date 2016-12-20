@@ -1,7 +1,8 @@
 /* -*- Mode: C++; tab-width: 2; c-basic-offset: 2 -*- */
 /*
-	pdftk, the PDF Tool Kit
-	Copyright (c) 2003, 2004 Sid Steward
+	PDFtk, the PDF Toolkit
+	Copyright (c) 2003-2013 Steward and Lee, LLC
+
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -13,13 +14,17 @@
 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 	GNU General Public License for more details.
 
-	Visit: http://www.gnu.org/licenses/gpl.txt
-	for more details on this license.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	Visit: http://www.pdftk.com for the latest information on pdftk
 
-	Please contact Sid Steward with bug reports:
-	ssteward at AccessPDF dot com
+	Visit: www.pdftk.com for pdftk information and articles
+	Permalink: http://www.pdflabs.com/tools/pdftk-the-pdf-toolkit/
+
+	Please email Sid Steward with questions or bug reports.
+	Include "pdftk" in the subject line to ensure successful delivery:
+	sid.steward at pdflabs dot com
+
 */
 
 class TK_Session {
@@ -32,6 +37,10 @@ class TK_Session {
 
 public:
 
+  typedef unsigned long PageNumber;
+	typedef enum { NORTH= 0, EAST= 90, SOUTH= 180, WEST= 270 } PageRotate; // DF rotation
+	typedef bool PageRotateAbsolute; // DF absolute / relative rotation
+
 	struct InputPdf {
 		string m_filename;
 		string m_password;
@@ -41,9 +50,9 @@ public:
 		// because one reader mayn't output the same page twice;
 		vector< pair< set<jint>, itext::PdfReader* > > m_readers;
 
-		jint m_num_pages;
+		PageNumber m_num_pages;
 
-		InputPdf() : m_authorized_b(true), m_num_pages(0) {}
+		InputPdf() : m_filename(), m_password(), m_authorized_b(true), m_readers(), m_num_pages(0) {}
 	};
 	// pack input PDF in the order they're given on the command line
 	vector< InputPdf > m_input_pdf;
@@ -52,13 +61,14 @@ public:
 	// store input PDF handles here
 	map< string, InputPdfIndex > m_input_pdf_index;
 
-	bool add_reader( InputPdf* input_pdf_p );
+	bool add_reader( InputPdf* input_pdf_p, bool keep_artifacts_b );
 	bool open_input_pdf_readers();
 
 	vector< string > m_input_attach_file_filename;
 	jint m_input_attach_file_pagenum;
 
 	string m_update_info_filename;
+	bool m_update_info_utf8_b;
 	string m_update_xmp_filename;
 
   enum keyword {
@@ -66,10 +76,15 @@ public:
 
     // the operations
     cat_k, // combine pages from input PDFs into a single output
+		shuffle_k, // like cat, but interleaves pages from input ranges
 		burst_k, // split a single, input PDF into individual pages
+		barcode_burst_k, // barcode_burst project
 		filter_k, // apply 'filters' to a single, input PDF based on output args
 		dump_data_k, // no PDF output
+		dump_data_utf8_k,
 		dump_data_fields_k,
+		dump_data_fields_utf8_k,
+		dump_data_annots_k,
 		generate_fdf_k,
 		unpack_files_k, // unpack files from input; no PDF output
 		//
@@ -81,9 +96,13 @@ public:
 		fill_form_k, // read FDF file and fill PDF form fields
 		attach_file_k, // attach files to output
 		update_info_k,
+		update_info_utf8_k, // if info isn't utf-8, it is encoded using xml entities
 		update_xmp_k,
 		background_k, // promoted from output option to operation in pdftk 1.10
+		multibackground_k, // feature added by Bernhard R. Link <brlink@debian.org>, Johann Felix Soden <johfel@gmx.de>
 		stamp_k,
+		multistamp_k, // feature added by Bernhard R. Link <brlink@debian.org>, Johann Felix Soden <johfel@gmx.de>
+		rotate_k, // rotate given pages as directed
 
 		// optional attach_file argument
 		attach_file_to_page_k,
@@ -122,23 +141,29 @@ public:
 
 		// forms
 		flatten_k,
+		need_appearances_k,
 		drop_xfa_k,
+		drop_xmp_k,
 		keep_first_id_k,
 		keep_final_id_k,
 
 		// pdftk options
 		verbose_k,
 		dont_ask_k,
-		do_ask_k
+		do_ask_k,
+
+		// page rotation
+		rot_north_k,
+		rot_east_k,
+		rot_south_k,
+		rot_west_k,
+		rot_left_k,
+		rot_right_k,
+		rot_upside_down_k
   };
   static keyword is_keyword( char* ss, int* keyword_len_p );
 
   keyword m_operation;
-
-  typedef unsigned long PageNumber;
-
-	typedef enum { NORTH= 0, EAST= 90, SOUTH= 180, WEST= 270 } PageRotate; // DF rotation
-	typedef bool PageRotateAbsolute; // DF absolute / relative rotation
 
   struct PageRef {
 		InputPdfIndex m_input_pdf_index;
@@ -152,21 +177,27 @@ public:
 			m_page_rot( page_rot ),
 			m_page_abs( page_abs ) {}
   };
-  vector< PageRef > m_page_seq;
+  vector< vector< PageRef > > m_page_seq; // one vector for each given page range
 
 	string m_form_data_filename;
 	string m_background_filename;
 	string m_stamp_filename;
   string m_output_filename;
+	bool m_output_utf8_b;
 	string m_output_owner_pw;
 	string m_output_user_pw;
 	jint m_output_user_perms;
+	bool m_multistamp_b; // use all pages of input stamp PDF, not just the first
+	bool m_multibackground_b; // use all pages of input background PDF, not just the first
 	bool m_output_uncompress_b;
 	bool m_output_compress_b;
 	bool m_output_flatten_b;
+	bool m_output_need_appearances_b;
 	bool m_output_drop_xfa_b;
+	bool m_output_drop_xmp_b;
 	bool m_output_keep_first_id_b;
 	bool m_output_keep_final_id_b;
+	bool m_cat_full_pdfs_b; // we are merging entire docs, not select pages
 
 	enum encryption_strength {
 		none_enc= 0,
@@ -190,7 +221,8 @@ public:
 	void unpack_files
 	( itext::PdfReader* input_reader_p );
 
-	void create_output();
+	int create_output_page( itext::PdfCopy*, PageRef, int );
+	int create_output();
 
 private:
 	enum ArgState {
